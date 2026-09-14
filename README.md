@@ -8,15 +8,22 @@ Prosta aplikacja Android do szybkiego dodawania wydatków do **Wallet by BudgetB
 - wyciąga kwoty zapisane m.in. jako `42,50 zł`, `1 234,56 PLN` lub `1,234.56`,
 - pobiera konta i kategorie z oficjalnego Wallet REST API,
 - tworzy wydatek na wybranym koncie i w wybranej kategorii,
-- przechowuje token zaszyfrowany kluczem z Android Keystore.
+- przechowuje token zaszyfrowany kluczem z Android Keystore,
+- obsługuje jasny i ciemny motyw systemowy.
 
-## Instalacja gotowego APK
+## Instalacja i aktualizacje przez Obtainium
 
-1. Otwórz kartę **Actions** w repozytorium.
-2. Wybierz najnowszy udany przebieg **Build Android APK**.
-3. Pobierz artefakt `wallet-quick-add-debug-apk`.
-4. Rozpakuj ZIP i uruchom `app-debug.apk` na telefonie.
-5. Zezwól przeglądarce lub aplikacji Moje pliki na instalowanie z tego źródła, jeśli Android o to zapyta.
+1. Dodaj w Obtainium aplikację z adresu:
+   `https://github.com/RenusPimpus/wallet-quick-add`
+2. Obtainium rozpozna źródło jako GitHub.
+3. Zainstaluj najnowsze APK z sekcji **Releases**.
+4. Kolejne wydania będą wykrywane przez Obtainium i instalowane jako aktualizacja.
+
+Pierwsze podpisane wydanie ma inny podpis niż wcześniejsza wersja debug. Jeśli masz ją zainstalowaną, odinstaluj ją jeden raz przed instalacją wersji z Releases. Spowoduje to usunięcie zapisanego tokenu. Następne aktualizacje zachowają aplikację i jej dane.
+
+## Ręczna instalacja
+
+Otwórz sekcję [Releases](https://github.com/RenusPimpus/wallet-quick-add/releases), wybierz najnowszą wersję i pobierz plik `WalletQuickAdd-*.apk`.
 
 ## Konfiguracja
 
@@ -24,6 +31,6 @@ W Wallet wygeneruj osobisty token REST API (wymagany plan Premium), następnie w
 
 Bazowy adres API: `https://rest.budgetbakers.com/wallet`.
 
-## Status
+## Podpis aplikacji
 
-Wersja `0.1.0` jest prototypem. Pierwszy zapis sprawdź bezpośrednio w Wallet.
+Wydania są automatycznie podpisywane w GitHub Actions. Pliku klucza, jego kopii zapasowej ani haseł nie wolno dodawać do repozytorium. Utrata klucza uniemożliwi aktualizowanie już zainstalowanej aplikacji tym samym pakietem.
