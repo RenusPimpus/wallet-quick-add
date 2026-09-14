@@ -5,6 +5,8 @@ data class WalletCategory(val id: String, val name: String)
 
 data class QuickAddState(
     val tokenDraft: String = "",
+    val tokenSaved: Boolean = false,
+    val tokenSettingsVisible: Boolean = true,
     val amount: String = "",
     val note: String = "",
     val accounts: List<WalletAccount> = emptyList(),

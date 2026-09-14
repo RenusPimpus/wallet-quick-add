@@ -1,10 +1,12 @@
 package com.polimorph.walletquickadd
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,12 +26,18 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -42,7 +50,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         viewModel.acceptIntent(intent)
         setContent {
-            MaterialTheme {
+            WalletQuickAddTheme {
                 Surface(modifier = Modifier.fillMaxSize()) { QuickAddScreen(viewModel) }
             }
         }
@@ -56,26 +64,64 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
+private fun WalletQuickAddTheme(content: @Composable () -> Unit) {
+    val darkTheme = isSystemInDarkTheme()
+    val context = LocalContext.current
+    val colors = when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && darkTheme -> dynamicDarkColorScheme(context)
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
+        darkTheme -> darkColorScheme()
+        else -> lightColorScheme()
+    }
+    MaterialTheme(colorScheme = colors, content = content)
+}
+
+@Composable
 private fun QuickAddScreen(viewModel: MainViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("Wallet Quick Add", style = MaterialTheme.typography.headlineMedium)
         Text("Udostępnij zaznaczoną lub skopiowaną kwotę do tej aplikacji, wybierz kategorię i zatwierdź.")
-        OutlinedTextField(
-            value = state.tokenDraft,
-            onValueChange = viewModel::setToken,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Token API Wallet") },
-            visualTransformation = PasswordVisualTransformation(),
-            singleLine = true
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(onClick = viewModel::saveTokenAndLoad, enabled = !state.loading) { Text("Zapisz i połącz") }
-            OutlinedButton(onClick = viewModel::loadMetadata, enabled = !state.loading) { Text("Odśwież") }
+
+        if (state.tokenSettingsVisible) {
+            OutlinedTextField(
+                value = state.tokenDraft,
+                onValueChange = viewModel::setToken,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Token API Wallet") },
+                visualTransformation = PasswordVisualTransformation(),
+                singleLine = true
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(onClick = viewModel::saveTokenAndLoad, enabled = !state.loading) {
+                    Text("Zapisz i połącz")
+                }
+                if (state.tokenSaved) {
+                    TextButton(onClick = viewModel::hideTokenSettings) {
+                        Text("Anuluj")
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                TextButton(onClick = viewModel::showTokenSettings) {
+                    Text("Zmień token")
+                }
+                TextButton(onClick = viewModel::loadMetadata, enabled = !state.loading) {
+                    Text("Odśwież dane")
+                }
+            }
         }
+
         SelectionMenu(
             "Konto",
             state.accounts.firstOrNull { it.id == state.selectedAccountId }?.name,
@@ -103,12 +149,23 @@ private fun QuickAddScreen(viewModel: MainViewModel) {
             label = { Text("Notatka (opcjonalnie)") },
             minLines = 2
         )
-        Button(onClick = viewModel::addExpense, modifier = Modifier.fillMaxWidth(), enabled = !state.loading) {
+        Button(
+            onClick = viewModel::addExpense,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !state.loading
+        ) {
             Text("Dodaj wydatek")
         }
         if (state.loading) CircularProgressIndicator()
         state.message?.let {
-            Text(it, color = if (state.isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+            Text(
+                it,
+                color = if (state.isError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                }
+            )
         }
     }
 }
@@ -122,15 +179,22 @@ private fun SelectionMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxWidth()) {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth(), enabled = options.isNotEmpty()) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = options.isNotEmpty()
+        ) {
             Text("$label: ${selected ?: "brak danych"}")
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { (id, name) ->
-                DropdownMenuItem(text = { Text(name) }, onClick = {
-                    onSelected(id)
-                    expanded = false
-                })
+                DropdownMenuItem(
+                    text = { Text(name) },
+                    onClick = {
+                        onSelected(id)
+                        expanded = false
+                    }
+                )
             }
         }
     }

@@ -13,8 +13,19 @@ import kotlinx.coroutines.launch
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val tokenStore = TokenStore(application)
     private val api = WalletApi()
-    private val _state = MutableStateFlow(QuickAddState(tokenDraft = tokenStore.load()))
+    private val storedToken = tokenStore.load()
+    private val _state = MutableStateFlow(
+        QuickAddState(
+            tokenDraft = storedToken,
+            tokenSaved = storedToken.isNotBlank(),
+            tokenSettingsVisible = storedToken.isBlank()
+        )
+    )
     val state: StateFlow<QuickAddState> = _state.asStateFlow()
+
+    init {
+        if (storedToken.isNotBlank()) loadMetadata()
+    }
 
     fun acceptIntent(intent: Intent?) {
         val sharedText = when (intent?.action) {
@@ -32,6 +43,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setNote(value: String) = _state.update { it.copy(note = value) }
     fun selectAccount(id: String) = _state.update { it.copy(selectedAccountId = id) }
     fun selectCategory(id: String) = _state.update { it.copy(selectedCategoryId = id) }
+    fun showTokenSettings() = _state.update { it.copy(tokenSettingsVisible = true) }
+    fun hideTokenSettings() = _state.update {
+        if (it.tokenSaved) it.copy(tokenSettingsVisible = false) else it
+    }
 
     fun saveTokenAndLoad() {
         val token = state.value.tokenDraft.trim()
@@ -40,13 +55,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         tokenStore.save(token)
+        _state.update {
+            it.copy(
+                tokenDraft = token,
+                tokenSaved = true,
+                tokenSettingsVisible = false,
+                message = "Token zapisany.",
+                isError = false
+            )
+        }
         loadMetadata()
     }
 
     fun loadMetadata() {
         val token = state.value.tokenDraft.trim()
         if (token.isBlank()) {
-            _state.update { it.copy(message = "Najpierw zapisz token API.", isError = true) }
+            _state.update {
+                it.copy(
+                    tokenSettingsVisible = true,
+                    message = "Najpierw zapisz token API.",
+                    isError = true
+                )
+            }
             return
         }
         viewModelScope.launch {
@@ -66,7 +96,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     )
                 }
             }.onFailure { error ->
-                _state.update { it.copy(loading = false, message = error.message ?: "Nie udało się połączyć.", isError = true) }
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        message = error.message ?: "Nie udało się połączyć.",
+                        isError = true
+                    )
+                }
             }
         }
     }
@@ -95,9 +131,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             runCatching {
                 api.createExpense(snapshot.tokenDraft, accountId, categoryId, amount, snapshot.note)
             }.onSuccess {
-                _state.update { it.copy(amount = "", note = "", loading = false, message = "Wydatek został dodany.", isError = false) }
+                _state.update {
+                    it.copy(
+                        amount = "",
+                        note = "",
+                        loading = false,
+                        message = "Wydatek został dodany.",
+                        isError = false
+                    )
+                }
             }.onFailure { error ->
-                _state.update { it.copy(loading = false, message = error.message ?: "Nie udało się dodać wydatku.", isError = true) }
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        message = error.message ?: "Nie udało się dodać wydatku.",
+                        isError = true
+                    )
+                }
             }
         }
     }
