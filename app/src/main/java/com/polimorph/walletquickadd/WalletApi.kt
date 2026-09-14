@@ -13,12 +13,16 @@ import java.time.Instant
 
 class WalletApi {
     suspend fun getAccounts(token: String): List<WalletAccount> = withContext(Dispatchers.IO) {
-        val payload = request("/v1/api/accounts", token)
-        extractArray(payload, listOf("accounts", "data", "items")).mapNotNull { value ->
-            val item = value as? JSONObject ?: return@mapNotNull null
-            val id = item.optString("id").ifBlank { item.optString("_id") }
-            val name = item.optString("name").ifBlank { item.optString("title") }
-            if (id.isBlank() || name.isBlank()) null else WalletAccount(id, name, readCurrency(item))
+        val array = extractArray(request("/v1/api/accounts", token), listOf("accounts", "data", "items"))
+        buildList {
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                val id = item.optString("id").ifBlank { item.optString("_id") }
+                val name = item.optString("name").ifBlank { item.optString("title") }
+                if (id.isNotBlank() && name.isNotBlank()) {
+                    add(WalletAccount(id, name, readCurrency(item)))
+                }
+            }
         }
     }
 
